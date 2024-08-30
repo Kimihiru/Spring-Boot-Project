@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>打卡页面</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    .container {
+      width: 500px;
+      height: 500px;
+      margin: 0 auto;
+      background-color: #f2f2f2;
+      border: 1px solid #ddd;
+      padding: 20px;
+    }
+    .check-in-btn {
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .check-in-btn:disabled {
+      cursor: not-allowed;
+    }
+    #header{
+      text-align: left;
+      background-color: #b3d4fc;
+    }
+    #main{
+      margin-top: 200px;
+    }
+    button{
+      background-color: #5b84ff;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div id="header">打卡</div>
+  <div id="main">
+    <button id="checkInBtn" class="check-in-btn">拍照打卡</button>
+    <div id="times"></div>
+  </div>
+  <p id="checkInStatus"></p >
+  <div id="footer">
+    <p id="distance"></p>
+    <p id="location"></p>
+  </div>
+  <a href="index.html">刷新位置</a>
+</div>
+
+<script>
+  // 获取当前日期和时间
+  function getCurrentDateTime() {
+    const now = new Date();
+    return now.toLocaleString();
+  }
+
+  // 打卡函数
+  function checkIn() {
+    const checkInTime = getCurrentDateTime();
+    document.getElementById('checkInStatus').textContent = `打卡成功！打卡时间：${checkInTime}`;
+    document.getElementById('checkInBtn').disabled = true;
+    alert(`打卡成功！打卡时间：${checkInTime}`)
+  }
+
+  // 绑定打卡按钮点击事件
+  document.getElementById('checkInBtn').addEventListener('click', checkIn);
+</script>
+<!--getTime-->
+<script>
+  //示例
+  setInterval(function(){
+    let times = new Date();
+    let year = times.getFullYear();
+    let month = times.getMonth() + 1;
+    let date = times.getDate();
+    let day = times.getDay();
+    let hour = times.getHours();
+    let minute = times.getMinutes();
+    let second = times.getSeconds();
+
+    let showTime = year + '/' + month + '/' + date  + '&nbsp'  + '&nbsp' + hour +'时' + minute + '分' + second + '秒'
+    document.getElementById("times").innerHTML = showTime;
+  },1000);
+</script>
+<!--getLocation-->
+<script>
+  function getLocation() {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(successCallback, errorCallback);
+    } else {
+      alert("您的浏览器不支持地理位置功能。");
+    }
+  }
+
+  function successCallback(position) {
+    let latitude = position.coords.latitude;
+    let longitude = position.coords.longitude;
+    let distance = getDistance(latitude,longitude);
+    let locationDistance = document.getElementById("distance");
+    locationDistance.textContent="当前距离："+distance+"m"+" "+"(100m内打卡)";
+    let locationElement = document.getElementById("location");
+    locationElement.textContent = "当前位置：纬度 " + latitude + "，经度 " + longitude;
+  }
+
+  function errorCallback(error) {
+    console.error("获取位置信息失败: " + error.message);
+  }
+  getLocation();
+</script>
+<!--getDistance-->
+<script>
+  function getDistance(lat1,lon1) {
+    let lat2 = 22.369308;
+    let lon2 = 113.42077;
+    // 长半轴，单位：m
+    const a = 6378137;
+    // 短半轴，单位：m
+    const b = 6356752.314245;
+    // 扁率
+    const f = 1 / 298.257223563;
+    const L = (lon2 - lon1) * Math.PI / 180;
+    const U1 = Math.atan((1 - f) * Math.tan(lat1 * Math.PI / 180));
+    const U2 = Math.atan((1 - f) * Math.tan(lat2 * Math.PI / 180));
+    const sinU1 = Math.sin(U1);
+    const cosU1 = Math.cos(U1);
+    const sinU2 = Math.sin(U2);
+    const cosU2 = Math.cos(U2);
+    let lambda = L;
+    let iterLimit = 100;
+    let cosSqAlpha;
+    let sinSigma;
+    let cos2SigmaM;
+    let sigma;
+    let sinLambda, cosLambda;
+    let sinAlpha;
+    let C;
+    let uSq;
+    let lambdaP;
+    let cosSigma;
+    do {
+      sinLambda = Math.sin(lambda);
+      cosLambda = Math.cos(lambda);
+      sinSigma = Math.sqrt((cosU2 * sinLambda) * (cosU2 * sinLambda) +
+              (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda) *
+              (cosU1 * sinU2 - sinU1 * cosU2 * cosLambda));
+      if (sinSigma === 0) {
+        // 重合点，距离为0
+        return 0;
+      }
+      cosSigma = sinU1 * sinU2 + cosU1 * cosU2 * cosLambda;
+      sigma = Math.atan2(sinSigma, cosSigma);
+      sinAlpha = cosU1 * cosU2 * sinLambda / sinSigma;
+      cosSqAlpha = 1 - sinAlpha * sinAlpha;
+      cos2SigmaM = cosSigma - 2 * sinU1 * sinU2 / cosSqAlpha;
+      if (Number.isNaN(cos2SigmaM)) {
+        // 0分母会导致NaN，替换成0
+        cos2SigmaM = 0;
+      }
+      C = f / 16 * cosSqAlpha * (4 + f * (4 - 3 * cosSqAlpha));
+      lambdaP = lambda;
+      lambda = L + (1 - C) * f * sinAlpha *
+              (sigma + C * sinSigma *
+                      (cos2SigmaM + C * cosSigma *
+                              (-1 + 2 * cos2SigmaM * cos2SigmaM)));
+    } while (Math.abs(lambda - lambdaP) > 1e-12 && --iterLimit > 0);
+ 
+    if (iterLimit === 0) {
+        // 无法收敛，距离未定义
+        return NaN;
+    }
+ 
+    uSq = cosSqAlpha * (a * a - b * b) / (b * b);
+    const A = 1 + uSq / 16384 *
+        (4096 + uSq * (-768 + uSq * (320 - 175 * uSq)));
+    const B = uSq / 1024 * (256 + uSq * (-128 + uSq * (74 - 47 * uSq)));
+    const deltaSigma = B * sinSigma * (cos2SigmaM + B / 4 *
+        (cosSigma * (-1 + 2 * cos2SigmaM * cos2SigmaM) -
+         B / 6 * cos2SigmaM *
+         (-3 + 4 * sinSigma * sinSigma) *
+         (-3 + 4 * cos2SigmaM * cos2SigmaM)));
+ 
+    const distance = b * A * (sigma - deltaSigma);
+    return Math.round(distance);
+  }
+</script>
+</body>
+</html>
